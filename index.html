@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autonomous Machine Learning Agent – Daily Tracker</title>
+<style>
+  :root{
+    --bg:#f6f6f7;
+    --card:#ffffff;
+    --blue:#1c57b8;
+    --blue-dark:#12356f;
+    --blue-soft:#dbe6f7;
+    --yellow:#f6d53b;
+    --lemon:#f4c91f;
+    --ink:#14284b;
+    --muted:#6b7a99;
+    --line:#e3e7ef;
+    --l0:#e8ecf3;
+    --l1:#b7cdf0;
+    --l2:#7fa5e3;
+    --l3:#3f77cc;
+    --l4:#1c57b8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Helvetica Neue",Arial,system-ui,sans-serif;
+    min-height:100vh;
+    padding:40px 20px 60px;
+  }
+  .wrap{max-width:900px;margin:0 auto}
+
+  header{margin-bottom:34px}
+  h1{
+    font-size:clamp(40px,8vw,80px);
+    line-height:.95;
+    letter-spacing:-0.045em;
+    color:var(--blue);
+    font-weight:800;
+  }
+  .date{margin-top:14px;color:var(--muted);font-size:14px}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:0;
+    padding:24px;margin-bottom:20px;
+  }
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:16px;font-weight:700}
+
+  /* progress */
+  .pct-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+  .pct-big{font-size:56px;font-weight:800;letter-spacing:-0.04em;color:var(--blue);line-height:1}
+  .pct-sub{color:var(--muted);font-size:14px}
+  .bar{height:22px;background:var(--l0);border-radius:999px;overflow:hidden}
+  .bar-fill{
+    height:100%;width:0;border-radius:999px;
+    background:linear-gradient(90deg,var(--blue),#3f77cc);
+    transition:width .8s cubic-bezier(.2,.8,.2,1);
+  }
+  .bar-marks{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px}
+
+  /* form */
+  form{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:6px}
+  label{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+  input[type=number],input[type=date]{
+    font:inherit;font-size:16px;padding:11px 14px;border:1.5px solid var(--line);
+    border-radius:10px;background:#fff;color:var(--ink);width:160px;
+  }
+  input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+  button{
+    font:inherit;font-weight:700;font-size:15px;cursor:pointer;border:none;
+    padding:12px 22px;border-radius:10px;background:var(--blue);color:#fff;
+    transition:transform .1s, background .2s;
+  }
+  button:hover{background:var(--blue-dark)}
+  button:active{transform:scale(.97)}
+  button.ghost{background:transparent;color:var(--muted);border:1.5px solid var(--line);font-weight:600}
+  button.ghost:hover{background:var(--l0);color:var(--ink)}
+  .msg{margin-top:12px;font-size:14px;color:var(--blue);min-height:20px;font-weight:600}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:0;padding:18px 20px}
+  .stat b{display:block;font-size:34px;letter-spacing:-0.03em;color:var(--blue);font-weight:800}
+  .stat span{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+  .stat.hot{background:var(--yellow);border-color:var(--yellow)}
+  .stat.hot b{color:var(--blue-dark)}
+  .stat.hot span{color:#5b4a00}
+
+  /* heatmap */
+  .heat-scroll{overflow-x:auto;padding-bottom:6px}
+  .heat{display:flex;gap:4px}
+  .col{display:flex;flex-direction:column;gap:4px}
+  .cell{width:15px;height:15px;border-radius:4px;background:var(--l0);cursor:pointer;position:relative}
+  .cell.l1{background:var(--l1)}
+  .cell.l2{background:var(--l2)}
+  .cell.l3{background:var(--l3)}
+  .cell.l4{background:var(--l4)}
+  .cell.today{outline:2px solid var(--yellow);outline-offset:1px}
+  .cell.future{visibility:hidden}
+  .months{display:flex;gap:4px;font-size:11px;color:var(--muted);margin-bottom:6px;height:14px}
+  .months div{width:15px;white-space:nowrap}
+  .legend{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);margin-top:14px;justify-content:flex-end}
+  .legend .cell{cursor:default}
+
+  /* letter */
+  .letter{
+    background:#fffbe6;border:1px solid #f1e3a0;border-radius:0;padding:26px 28px;
+    position:relative;
+  }
+  .letter::before{
+    content:"";position:absolute;top:-10px;right:28px;width:60px;height:20px;
+    background:var(--yellow);border-radius:0;
+  }
+  .letter h2{color:#8a7311}
+  .letter p{line-height:1.7;font-size:16px;color:#3a3414;outline:none}
+  .sign{margin-top:14px;font-weight:700;color:var(--blue-dark);font-size:16px}
+  .hint{font-size:11px;color:#a8975a;margin-top:6px}
+
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:30px}
+
+  .tip{
+    position:fixed;pointer-events:none;background:var(--ink);color:#fff;font-size:12px;
+    padding:6px 10px;border-radius:6px;z-index:10;opacity:0;transition:opacity .1s;white-space:nowrap;
+  }
+  @media(max-width:560px){
+    .stats{grid-template-columns:1fr 1fr 1fr}
+    .stat b{font-size:26px}
+    .stat{padding:14px}
+    .pct-big{font-size:44px}
+    input[type=number],input[type=date]{width:100%}
+    .field{flex:1 1 140px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Autonomous Machine Learning Agent</h1>
+    <div class="date" id="todayText"></div>
+  </header>
+
+  <!-- Progress -->
+  <section class="card">
+    <h2>Project completion</h2>
+    <div class="pct-row">
+      <div class="pct-big" id="pctBig">0%</div>
+      <div class="pct-sub" id="pctSub">No check-ins yet</div>
+    </div>
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+    <div class="bar-marks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+  </section>
+
+  <!-- Check-in -->
+  <section class="card">
+    <h2>Daily check-in</h2>
+    <form id="form">
+      <div class="field">
+        <label for="date">Date</label>
+        <input type="date" id="date" required>
+      </div>
+      <div class="field">
+        <label for="pct">Completed (%)</label>
+        <input type="number" id="pct" min="0" max="100" step="0.1" placeholder="e.g. 35" required>
+      </div>
+      <button type="submit">Save check-in</button>
+      <button type="button" class="ghost" id="resetBtn">Reset all</button>
+    </form>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat hot"><b id="curStreak">0</b><span>Current streak</span></div>
+    <div class="stat"><b id="longStreak">0</b><span>Longest streak</span></div>
+    <div class="stat"><b id="totalDays">0</b><span>Days checked in</span></div>
+  </div>
+
+  <!-- Streak grid -->
+  <section class="card">
+    <h2>Streak calendar</h2>
+    <div class="heat-scroll">
+      <div class="months" id="months"></div>
+      <div class="heat" id="heat"></div>
+    </div>
+    <div class="legend">
+      Less
+      <div class="cell"></div><div class="cell l1"></div><div class="cell l2"></div><div class="cell l3"></div><div class="cell l4"></div>
+      More progress
+    </div>
+  </section>
+
+  <!-- Letter -->
+  <section class="letter">
+    <h2>A small letter</h2>
+    <p id="letter" contenteditable="true" spellcheck="false">Dear me, this agent will not build itself in one day, and that is perfectly fine. Every small step I log here counts. Some days I will move a lot, some days only a little, but showing up is what matters. Keep shining, even softly.</p>
+    <div class="sign">— Iyyappan S</div>
+    <div class="hint">Tip: click on the letter to edit it. It saves automatically.</div>
+  </section>
+
+  <footer>Autonomous Machine Learning Agent · by Iyyappan S</footer>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+(function(){
+  var KEY = "ml_agent_tracker_v1";
+  var LETTER_KEY = "ml_agent_letter_v1";
+  var WEEKS = 30;
+
+  // data: { "YYYY-MM-DD": percent }
+  var data = {};
+  try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ data = {}; }
+
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){} }
+
+  function pad(n){ return n<10 ? "0"+n : ""+n; }
+  function fmt(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function parse(s){ var p=s.split("-"); return new Date(+p[0], +p[1]-1, +p[2]); }
+  function addDays(d,n){ var x=new Date(d); x.setDate(x.getDate()+n); return x; }
+
+  var today = new Date(); today.setHours(0,0,0,0);
+  var todayStr = fmt(today);
+
+  var el = function(id){ return document.getElementById(id); };
+  el("todayText").textContent = today.toLocaleDateString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+  el("date").value = todayStr;
+  el("date").max = todayStr;
+
+  function sortedDates(){ return Object.keys(data).sort(); }
+
+  function latestPct(){
+    var d = sortedDates();
+    return d.length ? data[d[d.length-1]] : 0;
+  }
+
+  function levelFor(dateStr){
+    var dates = sortedDates();
+    var i = dates.indexOf(dateStr);
+    if(i === -1) return 0;
+    var prev = i>0 ? data[dates[i-1]] : 0;
+    var delta = data[dateStr] - prev;
+    if(delta >= 5) return 4;
+    if(delta >= 3) return 3;
+    if(delta >= 1) return 2;
+    return 1;
+  }
+
+  function streaks(){
+    var dates = sortedDates();
+    var longest = 0, run = 0, prev = null;
+    dates.forEach(function(s){
+      var d = parse(s);
+      if(prev && fmt(addDays(prev,1)) === s) run++; else run = 1;
+      if(run > longest) longest = run;
+      prev = d;
+    });
+    // current streak: ends today (or yesterday if not yet checked in today)
+    var cur = 0;
+    var cursor = data[todayStr] !== undefined ? today : addDays(today,-1);
+    while(data[fmt(cursor)] !== undefined){ cur++; cursor = addDays(cursor,-1); }
+    return {cur:cur, longest:longest, total:dates.length};
+  }
+
+  function renderProgress(){
+    var p = latestPct();
+    el("pctBig").textContent = (Math.round(p*10)/10) + "%";
+    el("barFill").style.width = Math.min(100,Math.max(0,p)) + "%";
+    var d = sortedDates();
+    el("pctSub").textContent = d.length ? "Last updated " + parse(d[d.length-1]).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}) : "No check-ins yet";
+  }
+
+  function renderStats(){
+    var s = streaks();
+    el("curStreak").textContent = s.cur;
+    el("longStreak").textContent = s.longest;
+    el("totalDays").textContent = s.total;
+  }
+
+  var tip = el("tip");
+  function showTip(e, text){
+    tip.textContent = text;
+    tip.style.opacity = 1;
+    tip.style.left = (e.clientX + 12) + "px";
+    tip.style.top = (e.clientY - 34) + "px";
+  }
+
+  function renderHeat(){
+    var heat = el("heat"), months = el("months");
+    heat.innerHTML = ""; months.innerHTML = "";
+    // start on the Sunday WEEKS-1 weeks before this week's Sunday
+    var thisSunday = addDays(today, -today.getDay());
+    var start = addDays(thisSunday, -(WEEKS-1)*7);
+    var lastMonth = -1;
+    for(var w=0; w<WEEKS; w++){
+      var col = document.createElement("div"); col.className = "col";
+      var weekStart = addDays(start, w*7);
+      // month label
+      var m = weekStart.getMonth();
+      var lab = document.createElement("div");
+      if(m !== lastMonth){ lab.textContent = weekStart.toLocaleDateString(undefined,{month:"short"}); lastMonth = m; }
+      months.appendChild(lab);
+      for(var d=0; d<7; d++){
+        var day = addDays(weekStart, d);
+        var ds = fmt(day);
+        var cell = document.createElement("div");
+        cell.className = "cell";
+        if(day > today){ cell.className += " future"; }
+        else {
+          var lv = levelFor(ds);
+          if(lv) cell.className += " l"+lv;
+          if(ds === todayStr) cell.className += " today";
+          (function(ds,day){
+            var label = day.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}) +
+              (data[ds] !== undefined ? " · " + data[ds] + "%" : " · no check-in");
+            cell.addEventListener("mousemove", function(e){ showTip(e,label); });
+            cell.addEventListener("mouseleave", function(){ tip.style.opacity = 0; });
+            cell.addEventListener("click", function(){
+              el("date").value = ds;
+              if(data[ds] !== undefined) el("pct").value = data[ds];
+              el("pct").focus();
+            });
+          })(ds,day);
+        }
+        col.appendChild(cell);
+      }
+      heat.appendChild(col);
+    }
+    // scroll to the latest week
+    var sc = document.querySelector(".heat-scroll");
+    sc.scrollLeft = sc.scrollWidth;
+  }
+
+  function renderAll(){ renderProgress(); renderStats(); renderHeat(); }
+
+  el("form").addEventListener("submit", function(e){
+    e.preventDefault();
+    var ds = el("date").value;
+    var p = parseFloat(el("pct").value);
+    if(!ds || isNaN(p) || p<0 || p>100){ el("msg").textContent = "Enter a percentage between 0 and 100."; return; }
+    if(ds > todayStr){ el("msg").textContent = "You can't check in for a future date."; return; }
+    data[ds] = p;
+    save();
+    renderAll();
+    var s = streaks();
+    el("msg").textContent = "Saved! " + p + "% on " + ds + ". Current streak: " + s.cur + " day" + (s.cur===1?"":"s") + ". 🔥";
+    el("pct").value = "";
+  });
+
+  el("resetBtn").addEventListener("click", function(){
+    if(confirm("Delete all check-ins? This cannot be undone.")){
+      data = {}; save(); renderAll(); el("msg").textContent = "All data cleared.";
+    }
+  });
+
+  // pre-fill today's value if exists
+  if(data[todayStr] !== undefined) el("pct").value = data[todayStr];
+
+  // letter persistence
+  var letter = el("letter");
+  try{ var saved = localStorage.getItem(LETTER_KEY); if(saved) letter.textContent = saved; }catch(e){}
+  letter.addEventListener("input", function(){ try{ localStorage.setItem(LETTER_KEY, letter.textContent); }catch(e){} });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
